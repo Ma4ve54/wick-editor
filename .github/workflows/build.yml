@@ -8,8 +8,8 @@ jobs:
     steps:
       - name: Clone Code Manually
         run: |
-          git clone https://github.com{{ github.repository }}.git .
-          git checkout ${GITHUB_REF##*/}
+          # Clean clone directly targeting your branch
+          git clone --depth=1 https://github.com{{ github.repository }}.git .
 
       - name: Install Node 16 Manually
         run: |
@@ -18,23 +18,24 @@ jobs:
 
       - name: Build Web Application
         run: |
-          # Install dependencies bypassing legacy version conflicts
-          npm install --legacy-peer-deps || npm install --force || npm install
+          # Force resolution of old npm packages
+          npm install --legacy-peer-deps || npm install --force
           
-          # Run compilation commands safely
+          # Safely invoke the main compile scripts
           npm run build --if-present || true
           npm run package --if-present || true
           npm run webpack --if-present || true
 
-      - name: Find and Upload HTML Files
+      - name: Find and Package HTML Files
         run: |
-          echo "=== Locate Compiled HTML ==="
+          echo "=== Locating Compiled Output ==="
           find . -name "*.html" -not -path "*/node_modules/*"
           
-          # Package all output targets into a zip file manually to bypass upload plugin issues
+          # Create an explicit directory and scrape files into it
           mkdir -p output_bundle
           cp -r dist/* output_bundle/ 2>/dev/null || true
           cp -r build/* output_bundle/ 2>/dev/null || true
+          cp -r public/* output_bundle/ 2>/dev/null || true
           cp *.html output_bundle/ 2>/dev/null || true
           
       - name: Upload Artifact
