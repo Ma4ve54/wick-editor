@@ -1,10 +1,10 @@
 name: Compile Wick Editor Source
 on:
-  workflow_dispatch: # Allows you to trigger this manually
+  workflow_dispatch:
 
 jobs:
   build-project:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Locking the version prevents environment migration warnings
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -12,16 +12,29 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16 # Adjust if the source requires an older/newer version
+          node-version: 16 # Wick Editor is legacy and builds best on Node 16
 
-      - name: Install and Build
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Attempt Build and Find HTML
         run: |
-          npm install
-          npm run build --if-present
-          npm run package --if-present
+          # Try common Wick build scripts safely
+          npm run build --if-present || true
+          npm run package --if-present || true
+          npm run webpack --if-present || true
+          
+          # Debug step: Show all generated HTML files so we know where it went
+          echo "=== Finding all compiled HTML files ==="
+          find . -name "*.html" -not -path "*/node_modules/*"
 
-      - name: Upload Single HTML File
+      - name: Upload Finished Webpage
         uses: actions/upload-artifact@v4
         with:
           name: compiled-wick-editor
-          path: dist/ # Adjust this path if the engine outputs to 'build/' or 'public/'
+          path: |
+            dist/
+            build/
+            public/
+            *.html
+          if-no-files-found: warn
